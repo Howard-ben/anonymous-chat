@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anonymous Chat</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container" id="join-container">
+    <h2>Join Anonymous Chat</h2>
+    <input type="text" id="nickname" placeholder="Enter your nickname" />
+    <input type="text" id="room" placeholder="Enter room ID" />
+    <button id="generate-room">Generate Room</button>
+    <button id="join-btn">Join Chat</button>
+  </div>
+
+  <div class="chat-container hidden" id="chat-container">
+    <div class="chat-header">
+      <h3 id="room-name">Room: </h3>
+      <button id="leave-btn">Leave</button>
+    </div>
+    <div class="messages" id="messages"></div>
+    <div class="input-area">
+      <input type="text" id="message-input" placeholder="Type a message..." />
+      <button id="send-btn">Send</button>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
