@@ -18,9 +18,13 @@
   <div class="chat-container hidden" id="chat-container">
     <div class="chat-header">
       <h3 id="room-name">Room: </h3>
-      <button id="leave-btn">Leave</button>
+      <div class="header-buttons">
+        <button id="dark-toggle">🌙</button>
+        <button id="leave-btn">Leave</button>
+      </div>
     </div>
     <div class="messages" id="messages"></div>
+    <div id="typing-indicator" class="typing-indicator hidden"></div>
     <div class="input-area">
       <input type="text" id="message-input" placeholder="Type a message..." />
       <button id="send-btn">Send</button>

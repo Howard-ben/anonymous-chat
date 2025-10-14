@@ -7,55 +7,60 @@ const path = require("path");
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
-
 const PORT = process.env.PORT || 3000;
 
-// Serve static files from /public
 app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// Handle connections
 io.on("connection", (socket) => {
-  console.log("A new user connected:", socket.id);
+  console.log("User connected:", socket.id);
 
   socket.on("joinRoom", ({ room, nickname }) => {
     socket.join(room);
-    socket.data.nickname = nickname;
     socket.data.room = room;
+    socket.data.nickname = nickname;
 
-    console.log(`${nickname} joined room: ${room}`);
+    console.log(`${nickname} joined ${room}`);
 
-    // Notify everyone in the room (except the new user)
-    socket.to(room).emit("message", {
-      user: "System",
-      text: `${nickname} joined the chat.`,
-    });
-
-    // Send a welcome message to the new user
     socket.emit("message", {
       user: "System",
-      text: `Welcome to room ${room}, ${nickname}!`,
+      text: `Welcome ${nickname}! You joined room ${room}.`,
+    });
+
+    io.to(room).emit("message", {
+      user: "System",
+      text: `${nickname} has joined the chat.`,
     });
   });
 
-  // Broadcast message to everyone in the room (including sender)
+  // Broadcast message to everyone in room
   socket.on("chatMessage", ({ room, user, message }) => {
+    if (!room) return;
     io.to(room).emit("message", { user, text: message });
   });
 
+  // Typing indicator
+  socket.on("typing", ({ room, user }) => {
+    socket.to(room).emit("displayTyping", { user });
+  });
+
+  socket.on("stopTyping", ({ room }) => {
+    socket.to(room).emit("removeTyping");
+  });
+
   socket.on("disconnect", () => {
-    const nickname = socket.data.nickname || "A user";
     const room = socket.data.room;
-    if (room) {
+    const nickname = socket.data.nickname;
+    if (room && nickname) {
       io.to(room).emit("message", {
         user: "System",
         text: `${nickname} has left the chat.`,
       });
     }
-    console.log("A user disconnected:", socket.id);
+    console.log("User disconnected:", socket.id);
   });
 });
 
