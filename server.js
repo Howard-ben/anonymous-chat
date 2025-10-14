@@ -10,41 +10,55 @@ const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
 
-// Serve static files from the public folder
+// Serve static files from /public
 app.use(express.static(path.join(__dirname, "public")));
 
-// Default route
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// Socket.io connection
+// Handle connections
 io.on("connection", (socket) => {
-  console.log("A user connected:", socket.id);
+  console.log("A new user connected:", socket.id);
 
-  // When a user joins a room
   socket.on("joinRoom", ({ room, nickname }) => {
     socket.join(room);
-    socket.nickname = nickname;
+    socket.data.nickname = nickname;
+    socket.data.room = room;
+
     console.log(`${nickname} joined room: ${room}`);
 
+    // Notify everyone in the room (except the new user)
     socket.to(room).emit("message", {
       user: "System",
-      text: `${nickname} has joined the chat.`,
+      text: `${nickname} joined the chat.`,
+    });
+
+    // Send a welcome message to the new user
+    socket.emit("message", {
+      user: "System",
+      text: `Welcome to room ${room}, ${nickname}!`,
     });
   });
 
-  // When a message is sent
+  // Broadcast message to everyone in the room (including sender)
   socket.on("chatMessage", ({ room, user, message }) => {
     io.to(room).emit("message", { user, text: message });
   });
 
-  // When user disconnects
   socket.on("disconnect", () => {
-    console.log(`User disconnected: ${socket.id}`);
+    const nickname = socket.data.nickname || "A user";
+    const room = socket.data.room;
+    if (room) {
+      io.to(room).emit("message", {
+        user: "System",
+        text: `${nickname} has left the chat.`,
+      });
+    }
+    console.log("A user disconnected:", socket.id);
   });
 });
 
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`✅ Server running on port ${PORT}`);
 });
