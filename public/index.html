@@ -1,33 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Anonymous Chat</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container" id="join-container">
-    <h2>Join Anonymous Chat</h2>
-    <input type="text" id="nickname" placeholder="Enter your nickname" />
-    <input type="text" id="room" placeholder="Enter room ID" />
-    <button id="generate-room">Generate Room</button>
-    <button id="join-btn">Join Chat</button>
+  <!-- JOIN SCREEN -->
+  <div class="join-screen" id="join-screen">
+    <h1>AnonChat</h1>
+    <input id="nickname" placeholder="Nickname (leave blank for auto badge)" />
+    <div class="room-row">
+      <input id="room" placeholder="Room ID (or generate)" />
+      <button id="generate-room">↻</button>
+    </div>
+    <div class="join-buttons">
+      <button id="join-btn">Join</button>
+    </div>
   </div>
 
-  <div class="chat-container hidden" id="chat-container">
-    <div class="chat-header">
-      <h3 id="room-name">Room: </h3>
-      <div class="header-buttons">
+  <!-- CHAT SCREEN -->
+  <div class="chat-screen hidden" id="chat-screen">
+    <div class="topbar">
+      <div class="room-info">
+        <h2 id="room-name">Room:</h2>
+        <div id="room-count" class="small muted">0 online</div>
+      </div>
+      <div class="top-actions">
         <button id="dark-toggle">🌙</button>
         <button id="leave-btn">Leave</button>
       </div>
     </div>
-    <div class="messages" id="messages"></div>
-    <div id="typing-indicator" class="typing-indicator hidden"></div>
-    <div class="input-area">
-      <input type="text" id="message-input" placeholder="Type a message..." />
-      <button id="send-btn">Send</button>
+
+    <div class="main-area">
+      <aside class="sidebar">
+        <h3>Online</h3>
+        <ul id="online-list"></ul>
+      </aside>
+
+      <section class="chat-panel">
+        <div id="messages" class="messages"></div>
+        <div id="typing-indicator" class="typing hidden"></div>
+        <div class="composer">
+          <input id="message-input" placeholder="Type a message..." autocomplete="off" />
+          <button id="send-btn">Send</button>
+        </div>
+      </section>
     </div>
   </div>
 

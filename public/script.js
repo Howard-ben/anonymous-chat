@@ -1,71 +1,207 @@
+// script.js - client
 const socket = io();
-const joinContainer = document.getElementById("join-container");
-const chatContainer = document.getElementById("chat-container");
-const joinBtn = document.getElementById("join-btn");
+let currentRoom = "";
+let myNickname = "";
+const joinScreen = document.getElementById("join-screen");
+const chatScreen = document.getElementById("chat-screen");
+const nicknameInput = document.getElementById("nickname");
+const roomInput = document.getElementById("room");
 const generateBtn = document.getElementById("generate-room");
+const joinBtn = document.getElementById("join-btn");
 const leaveBtn = document.getElementById("leave-btn");
 const darkToggle = document.getElementById("dark-toggle");
-const roomInput = document.getElementById("room");
-const nicknameInput = document.getElementById("nickname");
 const messagesDiv = document.getElementById("messages");
 const messageInput = document.getElementById("message-input");
 const sendBtn = document.getElementById("send-btn");
-const roomName = document.getElementById("room-name");
+const onlineList = document.getElementById("online-list");
 const typingIndicator = document.getElementById("typing-indicator");
+const roomName = document.getElementById("room-name");
+const roomCount = document.getElementById("room-count");
 
 let typingTimeout;
 
-// Generate Room ID
-generateBtn.addEventListener("click", () => {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let id = "";
-  for (let i = 0; i < 6; i++) id += chars.charAt(Math.floor(Math.random() * chars.length));
-  roomInput.value = id;
-});
+// helpers
+function generateId(len=6){
+  const chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let s="";
+  for(let i=0;i<len;i++) s+=chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
 
-// Join Room
+generateBtn.addEventListener("click", () => roomInput.value = generateId(6));
+
+// join
 joinBtn.addEventListener("click", () => {
-  const room = roomInput.value.trim();
   const nickname = nicknameInput.value.trim();
-  if (!room || !nickname) return alert("Enter both room ID and nickname!");
-
+  const room = roomInput.value.trim();
+  if (!room) return alert("Enter or generate a room ID");
+  currentRoom = room;
+  myNickname = nickname || ""; // server will auto-assign if blank
   socket.emit("joinRoom", { room, nickname });
-
-  joinContainer.classList.add("hidden");
-  chatContainer.classList.remove("hidden");
-  roomName.textContent = "Room: " + room;
+  joinScreen.classList.add("hidden");
+  chatScreen.classList.remove("hidden");
+  roomName.textContent = "Room: " + currentRoom;
 });
 
-// Send message
-sendBtn.addEventListener("click", () => {
-  const message = messageInput.value.trim();
-  const room = roomInput.value.trim();
-  const user = nicknameInput.value.trim();
-  if (message === "") return;
-  socket.emit("chatMessage", { room, user, message });
-  messageInput.value = "";
-  socket.emit("stopTyping", { room });
+// Leave
+leaveBtn.addEventListener("click", () => location.reload());
+
+// dark toggle
+darkToggle.addEventListener("click", () => {
+  document.body.classList.toggle("light");
+  darkToggle.textContent = document.body.classList.contains("light") ? "☀️" : "🌙";
 });
 
-// Display messages
-socket.on("message", (msg) => {
-  const div = document.createElement("div");
-  div.classList.add("message");
-  div.innerHTML = `<strong>${msg.user}:</strong> ${msg.text}`;
-  messagesDiv.appendChild(div);
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+// send message
+sendBtn.addEventListener("click", sendMessage);
+messageInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendMessage();
 });
 
-// Typing Indicator Logic
+// typing indicator logic
 messageInput.addEventListener("input", () => {
-  const room = roomInput.value.trim();
-  const user = nicknameInput.value.trim();
-  socket.emit("typing", { room, user });
+  if (!currentRoom) return;
+  socket.emit("typing", { room: currentRoom });
   clearTimeout(typingTimeout);
   typingTimeout = setTimeout(() => {
-    socket.emit("stopTyping", { room });
-  }, 1500);
+    socket.emit("stopTyping", { room: currentRoom });
+  }, 1200);
 });
+
+function sendMessage(){
+  const text = messageInput.value.trim();
+  if (!text || !currentRoom) return;
+  socket.emit("chatMessage", { room: currentRoom, message: text });
+  messageInput.value = "";
+  socket.emit("stopTyping", { room: currentRoom });
+}
+
+// render a message
+function renderMessage(msg){
+  // msg: { id, userId, user, text, ts }
+  const div = document.createElement("div");
+  div.className = "message";
+  div.dataset.id = msg.id;
+  const me = msg.userId === socket.id;
+  if (me) div.classList.add("me"); else div.classList.add("other");
+
+  const meta = document.createElement("div");
+  meta.className = "meta";
+  const time = new Date(msg.ts || Date.now()).toLocaleTimeString();
+  meta.innerHTML = `<strong>${msg.user}</strong> <span class="small muted">${time}</span>`;
+  const body = document.createElement("div");
+  body.className = "body";
+  body.textContent = msg.text;
+
+  // controls: delete if mine, invite button on messages from others for private chat
+  const controls = document.createElement("div");
+  controls.className = "controls";
+
+  if (me){
+    const del = document.createElement("button");
+    del.className = "msg-btn";
+    del.textContent = "Delete";
+    del.onclick = () => {
+      const id = msg.id;
+      socket.emit("deleteMessage", { room: currentRoom, messageId: id });
+    };
+    controls.appendChild(del);
+  } else {
+    const invite = document.createElement("button");
+    invite.className = "msg-btn";
+    invite.textContent = "Invite";
+    invite.onclick = () => {
+      // invite the user who sent this message - need to find their socketId in online list
+      // we can store mapping in dataset of online list items
+      const userItem = document.querySelector(`#online-list li[data-name="${msg.user}"]`);
+      if (userItem){
+        const targetSocketId = userItem.dataset.socket;
+        if (confirm(`Invite ${msg.user} to a private chat?`)){
+          socket.emit("invitePrivate", { targetSocketId });
+          alert("Invite sent.");
+        }
+      } else {
+        alert("User not found (may have disconnected).");
+      }
+    };
+    controls.appendChild(invite);
+  }
+
+  div.appendChild(meta);
+  div.appendChild(body);
+  div.appendChild(controls);
+
+  messagesDiv.appendChild(div);
+  // nice scroll and animation handled by CSS
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+// remove message (on deletion)
+function removeMessageById(id){
+  const el = messagesDiv.querySelector(`.message[data-id="${id}"]`);
+  if (el){
+    // fade out then remove
+    el.style.transition = "opacity .18s, transform .18s";
+    el.style.opacity = "0";
+    el.style.transform = "translateY(8px)";
+    setTimeout(()=> el.remove(), 190);
+  }
+}
+
+// render online users list
+function renderOnlineList(users){
+  onlineList.innerHTML = "";
+  roomCount.textContent = `${users.length} online`;
+  users.forEach(u => {
+    const li = document.createElement("li");
+    li.dataset.socket = u.socketId;
+    li.dataset.name = u.nickname;
+    const left = document.createElement("div");
+    left.className = "user-badge";
+    const badge = document.createElement("div");
+    badge.className = "badge";
+    badge.textContent = u.badge.split("-")[0].slice(0,3).toUpperCase();
+    const name = document.createElement("div");
+    name.textContent = u.nickname;
+    left.appendChild(badge);
+    left.appendChild(name);
+
+    const inviteBtn = document.createElement("button");
+    inviteBtn.className = "invite-btn";
+    inviteBtn.textContent = "Invite";
+    inviteBtn.onclick = () => {
+      if (u.socketId === socket.id) { alert("You cannot invite yourself."); return; }
+      if (confirm(`Invite ${u.nickname} to a private chat?`)) {
+        socket.emit("invitePrivate", { targetSocketId: u.socketId });
+        alert("Invite sent.");
+      }
+    };
+
+    li.appendChild(left);
+    li.appendChild(inviteBtn);
+    onlineList.appendChild(li);
+  });
+}
+
+// SOCKET EVENTS
+socket.on("connect", () => {
+  // can use socket.id if needed
+});
+
+socket.on("roomHistory", (messages) => {
+  messagesDiv.innerHTML = "";
+  messages.forEach(m => renderMessage(m));
+});
+
+socket.on("message", (msg) => {
+  // if legacy system messages from server (System text without id), normalize
+  if (!msg.id) msg.id = "sys-" + Date.now();
+  renderMessage(msg);
+});
+
+socket.on("messageDeleted", ({ messageId }) => removeMessageById(messageId));
+
+socket.on("onlineUsers", (users) => renderOnlineList(users));
 
 socket.on("displayTyping", ({ user }) => {
   typingIndicator.classList.remove("hidden");
@@ -76,13 +212,34 @@ socket.on("removeTyping", () => {
   typingIndicator.classList.add("hidden");
 });
 
-// Leave Room
-leaveBtn.addEventListener("click", () => {
-  window.location.reload();
+// Private invite received
+socket.on("privateInvite", ({ from, privateRoom, inviterSocketId }) => {
+  const accept = confirm(`${from} invited you to a private chat (room ${privateRoom}). Accept?`);
+  if (accept) {
+    socket.emit("acceptInvite", { privateRoom, inviterSocketId });
+    // switch UI to that private room
+    currentRoom = privateRoom;
+    roomInput.value = privateRoom;
+    roomName.textContent = "Room: " + currentRoom;
+    messagesDiv.innerHTML = "";
+    // join screen/state already handled by server; show chat
+    joinScreen.classList.add("hidden");
+    chatScreen.classList.remove("hidden");
+  } else {
+    alert("Invite declined.");
+  }
 });
 
-// 🌙 Dark Mode Toggle
-darkToggle.addEventListener("click", () => {
-  document.body.classList.toggle("dark");
-  darkToggle.textContent = document.body.classList.contains("dark") ? "☀️" : "🌙";
+// Invite sent confirmation from server (optional)
+socket.on("inviteSent", ({ privateRoom }) => {
+  // auto-join inviter into private room (server will invite inviter too)
+  currentRoom = privateRoom;
+  roomInput.value = privateRoom;
+  roomName.textContent = "Room: " + currentRoom;
+  messagesDiv.innerHTML = "";
+  joinScreen.classList.add("hidden");
+  chatScreen.classList.remove("hidden");
 });
+
+// error messages
+socket.on("errorMsg", (txt) => alert(txt));

@@ -1,13 +1,13 @@
 {
   "name": "anonymous-chat",
   "version": "1.0.0",
-  "description": "A real-time anonymous chat app using Socket.io and Node.js",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.21.2",
-    "socket.io": "^4.8.1"
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5",
+    "uuid": "^9.0.1"
   }
 }
