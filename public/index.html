@@ -1,54 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Anonymous Chat</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DmlAnonChat</title>
+  <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/png" href="icon-192.png" />
 </head>
 <body>
-  <!-- JOIN SCREEN -->
-  <div class="join-screen" id="join-screen">
-    <h1>AnonChat</h1>
-    <input id="nickname" placeholder="Nickname (leave blank for auto badge)" />
-    <div class="room-row">
-      <input id="room" placeholder="Room ID (or generate)" />
-      <button id="generate-room">↻</button>
-    </div>
-    <div class="join-buttons">
-      <button id="join-btn">Join</button>
+  <div class="container">
+    <h1>DmlAnonChat 💬</h1>
+    <div class="chat-container">
+      <div id="chat-box" class="chat-box"></div>
+      <div class="input-container">
+        <input type="text" id="message" placeholder="Type a message..." />
+        <button id="send">Send</button>
+      </div>
     </div>
   </div>
 
-  <!-- CHAT SCREEN -->
-  <div class="chat-screen hidden" id="chat-screen">
-    <div class="topbar">
-      <div class="room-info">
-        <h2 id="room-name">Room:</h2>
-        <div id="room-count" class="small muted">0 online</div>
-      </div>
-      <div class="top-actions">
-        <button id="dark-toggle">🌙</button>
-        <button id="leave-btn">Leave</button>
-      </div>
-    </div>
-
-    <div class="main-area">
-      <aside class="sidebar">
-        <h3>Online</h3>
-        <ul id="online-list"></ul>
-      </aside>
-
-      <section class="chat-panel">
-        <div id="messages" class="messages"></div>
-        <div id="typing-indicator" class="typing hidden"></div>
-        <div class="composer">
-          <input id="message-input" placeholder="Type a message..." autocomplete="off" />
-          <button id="send-btn">Send</button>
-        </div>
-      </section>
-    </div>
-  </div>
+  <!-- Download App Button -->
+  <button id="download-app" class="download-btn hidden">📲 Download DmlAnonChat</button>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="script.js"></script>

@@ -1,7 +1,7 @@
 {
-  "name": "Anonymous Chat",
-  "short_name": "DML AnonChat",
-  "description": "A secure, real-time anonymous chat app that lets people connect privately.",
+  "name": "Dml Anonymous Chat",
+  "short_name": "DmlAnonChat",
+  "description": "A secure, real-time anonymous chat app that lets people connect privately with Dml's technology.",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
@@ -19,18 +19,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "screenshot1.png",
-      "sizes": "1080x1920",
-      "type": "image/png"
-    },
-    {
-      "src": "screenshot2.png",
-      "sizes": "1080x1920",
-      "type": "image/png"
     }
   ]
 }
