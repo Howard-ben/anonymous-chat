@@ -1,129 +1,91 @@
 const socket = io();
-
-const nicknameInput = document.getElementById("nickname");
-const roomInput = document.getElementById("room");
-const joinRoomBtn = document.getElementById("joinRoomBtn");
-const chatSection = document.getElementById("chat-section");
-const chatBox = document.getElementById("chat-box");
-const roomSetup = document.getElementById("room-setup");
+let room, nickname;
+const messages = document.getElementById("messages");
 const messageInput = document.getElementById("message");
-const sendBtn = document.getElementById("send");
-const userList = document.getElementById("userList");
-const roomTitle = document.getElementById("roomTitle");
-const typingIndicator = document.getElementById("typingIndicator");
-const downloadBtn = document.getElementById("download-app");
+const sendBtn = document.getElementById("sendBtn");
+const usersList = document.getElementById("users");
+const typingIndicator = document.getElementById("typing");
+const shareLinkBtn = document.getElementById("share-link-btn");
 
-let nickname = "";
-let room = "";
-let typingTimeout;
-let deferredPrompt;
-const hasInstalled = localStorage.getItem("dml_installed");
+// Generate random anonymous name
+function generateAnonName() {
+  return "Anon-" + Math.floor(Math.random() * 10000);
+}
 
-// Join room
-joinRoomBtn.addEventListener("click", () => {
-  nickname = nicknameInput.value.trim() || "Anon-" + Math.floor(Math.random() * 1000);
-  room = roomInput.value.trim() || "global";
-  socket.emit("joinRoom", { room, nickname });
+// Generate random room ID
+function generateRoomID() {
+  return "room-" + Math.random().toString(36).substring(2, 7);
+}
 
-  roomSetup.classList.add("hidden");
-  chatSection.classList.remove("hidden");
-  roomTitle.innerHTML = `Room: <strong>${room}</strong>`;
+// Check if a room is in the URL
+const urlParams = new URLSearchParams(window.location.search);
+room = urlParams.get("room") || generateRoomID();
+nickname = localStorage.getItem("nickname") || generateAnonName();
+localStorage.setItem("nickname", nickname);
+
+// If room was newly generated, update URL
+if (!urlParams.get("room")) {
+  const newUrl = `${window.location.origin}?room=${room}`;
+  window.history.replaceState({}, "", newUrl);
+}
+
+// Display share link button
+shareLinkBtn.classList.remove("hidden");
+shareLinkBtn.addEventListener("click", () => {
+  navigator.clipboard.writeText(window.location.href);
+  alert("✅ Room link copied! Share it with your friend to chat together.");
 });
+
+// Join room on connect
+socket.emit("joinRoom", { room, nickname });
 
 // Display messages
 socket.on("message", (msg) => {
   const div = document.createElement("div");
   div.classList.add("message");
+  if (msg.user === "System") div.classList.add("system");
   div.innerHTML = `<strong>${msg.user}:</strong> ${msg.text}`;
-
-  // Add delete button for sender
-  if (msg.user === nickname) {
-    const delBtn = document.createElement("button");
-    delBtn.textContent = "✖";
-    delBtn.classList.add("delete-btn");
-    delBtn.onclick = () => {
-      socket.emit("deleteMessage", { room, user: nickname, text: msg.text });
-      div.remove();
-    };
-    div.appendChild(delBtn);
-  }
-
-  chatBox.appendChild(div);
-  chatBox.scrollTop = chatBox.scrollHeight;
-
-  if (msg.user !== nickname && msg.user !== "System") {
-    showNotification(msg.user, msg.text);
-  }
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
 });
 
-// Update users in room
+// Show users online
 socket.on("updateUsers", (users) => {
-  userList.innerHTML = `👥 Online: ${users.join(", ")}`;
+  usersList.innerHTML = "";
+  users.forEach((user) => {
+    const li = document.createElement("li");
+    li.textContent = user;
+    usersList.appendChild(li);
+  });
 });
 
 // Typing indicator
 messageInput.addEventListener("input", () => {
   socket.emit("typing", { room, user: nickname });
-  clearTimeout(typingTimeout);
-  typingTimeout = setTimeout(() => {
+  clearTimeout(window.typingTimeout);
+  window.typingTimeout = setTimeout(() => {
     socket.emit("stopTyping", { room });
   }, 1500);
 });
 
 socket.on("displayTyping", ({ user }) => {
   typingIndicator.textContent = `${user} is typing...`;
-  typingIndicator.classList.remove("hidden");
 });
 
 socket.on("removeTyping", () => {
-  typingIndicator.classList.add("hidden");
+  typingIndicator.textContent = "";
 });
 
 // Send message
 sendBtn.addEventListener("click", () => {
   const message = messageInput.value.trim();
-  if (message === "") return;
-  socket.emit("chatMessage", { room, user: nickname, message });
-  messageInput.value = "";
-});
-
-// Push notifications
-if ("serviceWorker" in navigator && "Notification" in window) {
-  navigator.serviceWorker.ready.then((registration) => {
-    if (Notification.permission === "default") Notification.requestPermission();
-  });
-}
-
-function showNotification(user, message) {
-  if (Notification.permission === "granted") {
-    navigator.serviceWorker.ready.then((registration) => {
-      registration.showNotification("💬 New Message", {
-        body: `${user}: ${message}`,
-        icon: "icon-192.png",
-        badge: "icon-192.png",
-      });
-    });
+  if (message) {
+    socket.emit("chatMessage", { room, user: nickname, message });
+    messageInput.value = "";
   }
-}
-
-// Install button (first-time only)
-window.addEventListener("beforeinstallprompt", (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-  if (!hasInstalled) downloadBtn.classList.remove("hidden");
 });
 
-downloadBtn.addEventListener("click", async () => {
-  if (!deferredPrompt) return;
-  deferredPrompt.prompt();
-  const { outcome } = await deferredPrompt.userChoice;
-  if (outcome === "accepted") localStorage.setItem("dml_installed", "true");
-  else localStorage.setItem("dml_installed", "dismissed");
-  downloadBtn.classList.add("hidden");
-  deferredPrompt = null;
-});
-
-window.addEventListener("appinstalled", () => {
-  localStorage.setItem("dml_installed", "true");
-  downloadBtn.classList.add("hidden");
+// Press Enter to send
+messageInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") sendBtn.click();
 });

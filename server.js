@@ -1,8 +1,8 @@
-// server.js
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const path = require("path");
+const fs = require("fs");
 
 const app = express();
 const server = http.createServer(app);
@@ -16,87 +16,90 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// ✅ Track users in each room
-const roomUsers = {}; // { roomName: Set(users) }
+// ✅ Message storage file
+const chatFile = path.join(__dirname, "chats.json");
+let chatHistory = {};
+
+// Load old chats (if any)
+if (fs.existsSync(chatFile)) {
+  chatHistory = JSON.parse(fs.readFileSync(chatFile));
+}
+
+// Save chats to file
+function saveChats() {
+  fs.writeFileSync(chatFile, JSON.stringify(chatHistory, null, 2));
+}
+
+// Track users
+const roomUsers = {};
 
 io.on("connection", (socket) => {
   console.log("🟢 User connected:", socket.id);
 
-  // 🧩 Join a room
   socket.on("joinRoom", ({ room, nickname }) => {
     socket.join(room);
     socket.data.room = room;
     socket.data.nickname = nickname;
 
-    // Add user to tracking list
     if (!roomUsers[room]) roomUsers[room] = new Set();
     roomUsers[room].add(nickname);
 
-    console.log(`👤 ${nickname} joined ${room}`);
+    // Load old chat history
+    if (chatHistory[room]) {
+      chatHistory[room].forEach((msg) => {
+        socket.emit("message", msg);
+      });
+    }
 
-    // Welcome message for new user
-    socket.emit("message", {
-      user: "System",
-      text: `Welcome ${nickname}! You joined room ${room}.`,
-    });
+    // System join messages
+    socket.emit("message", { user: "System", text: `Welcome ${nickname}!` });
+    socket.to(room).emit("message", { user: "System", text: `${nickname} joined the room.` });
 
-    // Notify all in the room
-    io.to(room).emit("message", {
-      user: "System",
-      text: `${nickname} has joined the chat.`,
-    });
-
-    // Update user list in room
     io.to(room).emit("updateUsers", Array.from(roomUsers[room]));
   });
 
-  // 💬 Chat messages
+  // New chat message
   socket.on("chatMessage", ({ room, user, message }) => {
-    if (!room) return;
-    io.to(room).emit("message", { user, text: message });
+    const msg = { user, text: message };
+    io.to(room).emit("message", msg);
+
+    // Save to history
+    if (!chatHistory[room]) chatHistory[room] = [];
+    chatHistory[room].push(msg);
+    saveChats();
   });
 
-  // ✍️ Typing indicator
+  // Typing indicator
   socket.on("typing", ({ room, user }) => {
     socket.to(room).emit("displayTyping", { user });
   });
-
   socket.on("stopTyping", ({ room }) => {
     socket.to(room).emit("removeTyping");
   });
 
-  // 🗑️ Delete message broadcast
+  // Delete message
   socket.on("deleteMessage", ({ room, user, text }) => {
-    io.to(room).emit("message", {
-      user: "System",
-      text: `${user} deleted a message.`,
-    });
+    if (chatHistory[room]) {
+      chatHistory[room] = chatHistory[room].filter((m) => m.text !== text || m.user !== user);
+      saveChats();
+    }
+    io.to(room).emit("message", { user: "System", text: `${user} deleted a message.` });
   });
 
-  // 🔄 Update user list on disconnect
+  // Disconnect handling
   socket.on("disconnect", () => {
     const room = socket.data.room;
     const nickname = socket.data.nickname;
-
     if (room && roomUsers[room]) {
       roomUsers[room].delete(nickname);
-
-      io.to(room).emit("message", {
-        user: "System",
-        text: `${nickname} has left the chat.`,
-      });
-
-      // Send updated user list
+      io.to(room).emit("message", { user: "System", text: `${nickname} left the chat.` });
       io.to(room).emit("updateUsers", Array.from(roomUsers[room]));
-
       if (roomUsers[room].size === 0) delete roomUsers[room];
     }
-
     console.log("🔴 User disconnected:", socket.id);
   });
 });
 
-// 🟢 Start server
 server.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`✅ DmlAnonChat Server running on port ${PORT}`);
 });

@@ -6,38 +6,77 @@
   <title>DmlAnonChat</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="style.css" />
-  <link rel="icon" type="image/png" href="icon-192.png" />
+  <script defer src="/socket.io/socket.io.js"></script>
+  <script defer src="script.js"></script>
 </head>
+
 <body>
-  <div class="container">
+  <header>
     <h1>💬 DmlAnonChat</h1>
+    <button id="toggle-dark">🌙</button>
+  </header>
 
-    <!-- Room Setup -->
-    <div id="room-setup">
-      <input type="text" id="nickname" placeholder="Enter your nickname..." />
-      <input type="text" id="room" placeholder="Enter room name..." />
-      <button id="joinRoomBtn">Join Room</button>
-    </div>
+  <main>
+    <!-- Chat container -->
+    <div class="chat-container">
+      <div class="sidebar">
+        <h3>Online Users</h3>
+        <ul id="users"></ul>
+      </div>
 
-    <!-- Chat Section -->
-    <div id="chat-section" class="hidden">
-      <div id="roomTitle"></div>
-      <div id="userList" class="user-list"></div>
-      <div id="chat-box" class="chat-box"></div>
+      <div class="chat-box">
+        <div id="messages" class="messages"></div>
+        <div id="typing" class="typing-indicator"></div>
 
-      <div id="typingIndicator" class="typing hidden">Someone is typing...</div>
+        <div class="input-area">
+          <input id="message" type="text" placeholder="Type your message..." autocomplete="off" />
+          <button id="sendBtn">Send</button>
+        </div>
 
-      <div class="input-container">
-        <input type="text" id="message" placeholder="Type a message..." />
-        <button id="send">Send</button>
+        <div class="chat-controls">
+          <button id="share-link-btn" class="hidden">📤 Share Room Link</button>
+        </div>
       </div>
     </div>
-  </div>
+  </main>
 
-  <!-- Install App Button -->
-  <button id="download-app" class="download-btn hidden">📲 Download DmlAnonChat</button>
+  <footer>
+    <button id="install-btn" class="install-btn hidden">📲 Download DmlAnonChat</button>
+    <p>Anonymous chatting made simple and secure 🕶️</p>
+  </footer>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js"></script>
+  <script>
+    // ✅ Dark Mode toggle
+    const toggleDark = document.getElementById("toggle-dark");
+    toggleDark.addEventListener("click", () => {
+      document.body.classList.toggle("dark-mode");
+      localStorage.setItem("darkMode", document.body.classList.contains("dark-mode"));
+    });
+    if (localStorage.getItem("darkMode") === "true") {
+      document.body.classList.add("dark-mode");
+    }
+
+    // ✅ PWA Install button
+    let deferredPrompt;
+    const installBtn = document.getElementById("install-btn");
+
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.classList.remove("hidden");
+    });
+
+    installBtn.addEventListener("click", async () => {
+      installBtn.classList.add("hidden");
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === "accepted") {
+          console.log("App installed");
+        }
+        deferredPrompt = null;
+      }
+    });
+  </script>
 </body>
 </html>
