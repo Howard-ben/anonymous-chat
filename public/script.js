@@ -10,10 +10,12 @@ const messageInput = document.getElementById("message");
 const sendBtn = document.getElementById("send");
 const userList = document.getElementById("userList");
 const roomTitle = document.getElementById("roomTitle");
+const typingIndicator = document.getElementById("typingIndicator");
 const downloadBtn = document.getElementById("download-app");
 
 let nickname = "";
 let room = "";
+let typingTimeout;
 let deferredPrompt;
 const hasInstalled = localStorage.getItem("dml_installed");
 
@@ -28,11 +30,24 @@ joinRoomBtn.addEventListener("click", () => {
   roomTitle.innerHTML = `Room: <strong>${room}</strong>`;
 });
 
-// Receive message
+// Display messages
 socket.on("message", (msg) => {
   const div = document.createElement("div");
   div.classList.add("message");
   div.innerHTML = `<strong>${msg.user}:</strong> ${msg.text}`;
+
+  // Add delete button for sender
+  if (msg.user === nickname) {
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "✖";
+    delBtn.classList.add("delete-btn");
+    delBtn.onclick = () => {
+      socket.emit("deleteMessage", { room, user: nickname, text: msg.text });
+      div.remove();
+    };
+    div.appendChild(delBtn);
+  }
+
   chatBox.appendChild(div);
   chatBox.scrollTop = chatBox.scrollHeight;
 
@@ -41,17 +56,35 @@ socket.on("message", (msg) => {
   }
 });
 
+// Update users in room
+socket.on("updateUsers", (users) => {
+  userList.innerHTML = `👥 Online: ${users.join(", ")}`;
+});
+
+// Typing indicator
+messageInput.addEventListener("input", () => {
+  socket.emit("typing", { room, user: nickname });
+  clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(() => {
+    socket.emit("stopTyping", { room });
+  }, 1500);
+});
+
+socket.on("displayTyping", ({ user }) => {
+  typingIndicator.textContent = `${user} is typing...`;
+  typingIndicator.classList.remove("hidden");
+});
+
+socket.on("removeTyping", () => {
+  typingIndicator.classList.add("hidden");
+});
+
 // Send message
 sendBtn.addEventListener("click", () => {
   const message = messageInput.value.trim();
   if (message === "") return;
   socket.emit("chatMessage", { room, user: nickname, message });
   messageInput.value = "";
-});
-
-// Update user list
-socket.on("updateUsers", (users) => {
-  userList.innerHTML = `👥 Online: ${users.join(", ")}`;
 });
 
 // Push notifications
@@ -73,7 +106,7 @@ function showNotification(user, message) {
   }
 }
 
-// Install button logic (first-time only)
+// Install button (first-time only)
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();
   deferredPrompt = e;
@@ -84,11 +117,8 @@ downloadBtn.addEventListener("click", async () => {
   if (!deferredPrompt) return;
   deferredPrompt.prompt();
   const { outcome } = await deferredPrompt.userChoice;
-  if (outcome === "accepted") {
-    localStorage.setItem("dml_installed", "true");
-  } else {
-    localStorage.setItem("dml_installed", "dismissed");
-  }
+  if (outcome === "accepted") localStorage.setItem("dml_installed", "true");
+  else localStorage.setItem("dml_installed", "dismissed");
   downloadBtn.classList.add("hidden");
   deferredPrompt = null;
 });
