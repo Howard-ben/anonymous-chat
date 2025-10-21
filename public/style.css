@@ -2,17 +2,16 @@ body {
   margin: 0;
   font-family: "Poppins", sans-serif;
   background-color: #121212;
-  color: #e0e0e0;
+  color: #f0f0f0;
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100vh;
-  flex-direction: column;
 }
 
 .container {
-  width: 90%;
-  max-width: 400px;
+  width: 95%;
+  max-width: 450px;
   background: #1e1e1e;
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.3);
@@ -25,19 +24,50 @@ h1 {
   margin-bottom: 20px;
 }
 
-.chat-container {
-  display: flex;
-  flex-direction: column;
-  height: 400px;
+#room-setup input {
+  width: 90%;
+  padding: 10px;
+  margin: 5px 0;
+  border: none;
+  border-radius: 8px;
+  background: #2b2b2b;
+  color: #fff;
 }
 
-.chat-box {
-  flex: 1;
-  background: #222;
+#joinRoomBtn {
+  background: #1a73e8;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: 0.2s;
+}
+#joinRoomBtn:hover {
+  background: #155ab6;
+}
+
+.hidden {
+  display: none !important;
+}
+
+#chat-box {
+  background: #2b2b2b;
   padding: 10px;
   border-radius: 10px;
+  height: 300px;
   overflow-y: auto;
   margin-bottom: 10px;
+  text-align: left;
+}
+
+.message {
+  margin: 6px 0;
+}
+
+.message strong {
+  color: #1a73e8;
 }
 
 .input-container {
@@ -61,14 +91,19 @@ h1 {
   padding: 10px 16px;
   border-radius: 8px;
   cursor: pointer;
-  transition: 0.2s;
 }
-
 #send:hover {
   background: #155ab6;
 }
 
-/* Download App Button */
+.user-list {
+  font-size: 13px;
+  background: #222;
+  border-radius: 8px;
+  padding: 5px;
+  margin-bottom: 10px;
+}
+
 .download-btn {
   position: fixed;
   bottom: 80px;
@@ -88,7 +123,4 @@ h1 {
 .download-btn:hover {
   background: #155ab6;
   transform: translateX(-50%) scale(1.05);
-}
-.hidden {
-  display: none !important;
 }

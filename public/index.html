@@ -10,9 +10,19 @@
 </head>
 <body>
   <div class="container">
-    <h1>DmlAnonChat 💬</h1>
-    <div class="chat-container">
+    <h1>💬 DmlAnonChat</h1>
+
+    <div id="room-setup">
+      <input type="text" id="nickname" placeholder="Enter your nickname..." />
+      <input type="text" id="room" placeholder="Enter room name..." />
+      <button id="joinRoomBtn">Join Room</button>
+    </div>
+
+    <div id="chat-section" class="hidden">
+      <div id="roomTitle"></div>
+      <div id="userList" class="user-list"></div>
       <div id="chat-box" class="chat-box"></div>
+
       <div class="input-container">
         <input type="text" id="message" placeholder="Type a message..." />
         <button id="send">Send</button>
@@ -20,7 +30,7 @@
     </div>
   </div>
 
-  <!-- Download App Button -->
+  <!-- Install Button -->
   <button id="download-app" class="download-btn hidden">📲 Download DmlAnonChat</button>
 
   <script src="/socket.io/socket.io.js"></script>
